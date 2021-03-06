@@ -10,7 +10,7 @@ const instance = axios.create({
 })
 
 // Authenticates you with username and password and returns the session token
-async function authenticate(username: String, password: String): Promise<String> {
+async function authenticate(username: String, password: String, hash: String): Promise<String> {
 
     const response = await instance({
         method: 'get',
@@ -19,7 +19,7 @@ async function authenticate(username: String, password: String): Promise<String>
             loginschool: 'krm',
             loginuser: username,
             loginpassword: password,
-            hash: '602feee1219441.84804637' // TODO: find out what this is
+            hash: hash
         }
     })
 
@@ -36,12 +36,12 @@ async function getCsrfToken(sturmsession: String): Promise<String> {
     const response = await instance({
         method: 'get',
         url: '/',
-        headers: {
+        /* headers: {
             'Cookie': `sturmsession=${sturmsession}`
-        }
+        } */
     })
 
-    return response.data.match(/(?<=csrfToken=')\w+/)[0]
+    return response.data.match(/(?<=csrfToken\s=\s')\w+/)[0]
 }
 
 // Gets subject, classes, teachers and rooms
@@ -62,6 +62,17 @@ async function getResources(sturmsession: String, csrfToken: String): Promise<Re
 
     return response.data
 }
+
+async function getMainHash(): Promise<String> {
+    const response = await instance({
+        method: 'get',
+        url: '/',
+    })
+    return response.data.match(/(?<=\"hash\"\svalue=\")\w+[.]\w+/)[0];
+
+}
+
+
 
 // Gets the timetable
 // FIXME: this doesn't work
@@ -86,9 +97,12 @@ async function getTimetable(sturmsession: String): Promise<any>{
 }
 
 async function test() {
-    const session = await authenticate(process.env.USERNAME, process.env.PASSWORD)
+    const hash = await getMainHash()
+    const session = await authenticate(process.env.USERNAME, process.env.PASSWORD, hash)
     const csrfToken = await getCsrfToken(session)
     const resources = await getResources(session, csrfToken)
+    console.log("csrfToken:", csrfToken)
+    console.log("hash:", hash)
     console.log(resources)
 }
 
